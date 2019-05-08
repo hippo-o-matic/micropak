@@ -1,0 +1,22 @@
+Micropak, a basic header library for archiving files
+You probably shouldn't use this for anything serious
+
+In case this library is updated in the future, there is backwards compatability for any archives packed with previous release builds.
+If you want to save on space and only use the latest unpacker version, delete anything between the //OLD//VERSIONS lines.
+All commands are stored under the "micropak" namespace, these include:
+
+micropak::pack(std::string dirname, std::string outname);
+
+
+micropak::unpack(std::string input_file, std::string output_dir);
+
+
+micropak::getVersion(std::string filename); | micropak::getVersion(std::fstream &stream);
+gets the version of the library the archive was packed with
+
+
+This repo also comes with a minimalist example program, archive.cpp. Simply compile with make
+
+Program usage: ./archiver <options>
+-p <directory> <file> | Recursively packs all files in <directory> to <file>. Uses <directory>.mpak if <file> not given
+-u <file> <directory> | Unpacks an archive, <file>, using <directory> as it's root. Uses <file> as the name if <directory> not given
