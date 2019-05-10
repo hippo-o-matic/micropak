@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 		}
 	} else { // Display help message if argument amount doesn't match
 		std::cout << 
-			"Tinypak v0.1\n"
+			"Micropak v0.1\n"
 			"A (not very good) basic file archiving program\n"
 			"Options:\n"
 			"-p <directory> <file> | Recursively packs all files in <directory> to <file>. Uses <directory>.mpak if <file> not given\n"

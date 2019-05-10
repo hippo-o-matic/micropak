@@ -3,19 +3,24 @@ You probably shouldn't use this for anything serious
 
 In case this library is updated in the future, there is backwards compatability for any archives packed with previous release builds.
 If you want to save on space and only use the latest unpacker version, delete anything between the //OLD//VERSIONS lines.
+
 All commands are stored under the "micropak" namespace, these include:
 
-micropak::pack(std::string dirname, std::string outname);
+micropak::pack(std::string input_directory, std::string output_file, std::vector<meta_entry>);
+Packs the <input_directory> into an <output_file>, by default the directory's name. Also takes a vector of meta entries, which are pairs of values
+you can store right in the archive. 
 
+Example of a meta entry:
+{name, value} | {"Author", "hippo"}
 
 micropak::unpack(std::string input_file, std::string output_dir);
-
+Unpacks the <input_file> to <output_dir>, by default the working directory. Returns a vector of meta_entries found
 
 micropak::getVersion(std::string filename); | micropak::getVersion(std::fstream &stream);
-gets the version of the library the archive was packed with
+Gets the version of the library the archive was packed with
 
 
-This repo also comes with a minimalist example program, archive.cpp. Simply compile with make
+This repo also comes with a minimalist example program, archive.cpp. Simply compile with make.
 
 Program usage: ./archiver <options>
 -p <directory> <file> | Recursively packs all files in <directory> to <file>. Uses <directory>.mpak if <file> not given
