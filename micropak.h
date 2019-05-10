@@ -208,6 +208,8 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 	//EXTRACTION METHOD v1
 	//////////////////////
 	if(version == 1) {
+		fsys::create_directories(outputdir); // Make the output path if it doesn't exist yet
+
 		input_file.seekg(cursor);
 		size_t meta_num = 0;
 		input_file.read(reinterpret_cast<char*>(&meta_num), sizeof(std::size_t)); // Get the amount of meta entries
