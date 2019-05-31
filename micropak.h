@@ -22,13 +22,19 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#define MAX_ARCHIVE_BUFFER_SIZE 5000000 //The maximum amount of memory to take for file extraction/compression (default 5 MB)
+#define MICROPAK_BUFFER_SIZE 5000000 //The maximum amount of memory to take for file extraction/compression (default 5 MB)
+#define MICROPAK_USE_GZIP  // Add support for compressing the archive
 
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <experimental/filesystem> // Change this to <filesystem> when g++ decides it's good enough 
+
+#ifdef MICROPAK_USE_GZIP
+#include "gzip/compress.hpp"
+#include "gzip/decompress.hpp"
+#endif
 
 // A class that combines and seperates files to and from .mpak files
 namespace micropak {
@@ -38,6 +44,9 @@ namespace micropak {
 		bool isDir; // Is the entry a directory or not?
 		std::string path; // The path to the file 
 		long unsigned size; // The size of the data
+
+		bool compressed; // Is the entry compressed or not?
+		
 	};
 
 	struct meta_entry { // Additional data stored in the file header
@@ -45,7 +54,16 @@ namespace micropak {
 		std::string value;
 	};
 
-	bool pack(std::string dirname, std::string outname = "", std::vector<micropak::meta_entry> m_entries = {}); // Pack a directory (dirname) into a single file (outname).mpak
+	bool pack(std::string dirname, 
+		std::string outname = "",
+	#ifdef MICROPAK_USE_GZIP
+		bool compress = true,
+	#else
+		bool compress = false,
+	#endif
+		std::vector<micropak::meta_entry> m_entries = {}
+	); // Pack a directory (dirname) into a single file (outname).mpak
+
 	std::vector<micropak::meta_entry> unpack(std::string filename, std::string outputdir = "."); // Unpack (filename).mpak into a directory (outputdir)
 
 	unsigned short getVersion(std::string filename);
@@ -54,23 +72,31 @@ namespace micropak {
 	const unsigned short max_version = 1;
 };
 
-bool micropak::pack(std::string dirname, std::string outname, std::vector<micropak::meta_entry> m_entries) {
+
+bool micropak::pack(std::string dirname, std::string outname, bool compress, std::vector<micropak::meta_entry> m_entries) {
+#ifndef MICROPAK_USE_GZIP
+	if(compress) {
+		std::cout << "MICROPAK: Cannot compress when gzip support disabled, please set compress argument to false" << std::endl;
+		return false;
+	}
+#endif
+
 	fsys::path inDir = dirname; // Make a filesystem path
 	if(!fsys::exists(inDir)) {
-		std::cout << "ARCHIVE: Directory to pack doesn't exist" << std::endl;
+		std::cout << "MICROPAK: Directory to pack doesn't exist" << std::endl;
 		return false;
 	}
 	if(outname == "") {
 		outname = dirname.substr(dirname.find_last_of('/') + 1) + ".mpak"; // Name the output file after the directory's name
 	}
 	// if(fsys::exists(outname)) {
-	// 	std::cout << "ARCHIVE: File already exists" << std::endl;
+	// 	std::cout << "MICROPAK: File already exists" << std::endl;
 	// 	return false;
 	// }
 
 	std::fstream result(outname.c_str(), std::ios::out | std::ios::binary | std::ios::trunc); // Create the resulting file
 	if(!result) {
-		std::cout << "ARCHIVE: Unable to write \"" + outname + "\", do you have permissions?" << std::endl;
+		std::cout << "MICROPAK: Unable to write \"" + outname + "\", do you have permissions?" << std::endl;
 		return false;
 	}	
 
@@ -96,9 +122,58 @@ bool micropak::pack(std::string dirname, std::string outname, std::vector<microp
 	}
 
 	unsigned cursor = 0;
+
 	result.seekp(std::ios::beg);
 	result.write(reinterpret_cast<const char*>(&max_version), sizeof(unsigned short)); // Write the version
 	cursor += sizeof(unsigned short);
+
+	char* buffer = new char[MICROPAK_BUFFER_SIZE];
+	for(auto it = entries.begin(); it != entries.end(); it++){ // Get the filedata for each entry and append it
+		if(!it->isDir && fsys::exists(dirname + '/' + it->path)){ 
+			std::fstream input_file(dirname + '/' + it->path, std::ios::in | std::ios::binary);
+			input_file.seekg(std::ios::beg);
+
+			if(input_file) {
+				for(float i = 0; i < ((float)it->size/(float)MICROPAK_BUFFER_SIZE); i++) { // If the file is too big, seperate it into chunks
+					if(i+1 > it->size/MICROPAK_BUFFER_SIZE) { // If the data left doesn't fill a chunk, be more precise
+						input_file.read(buffer, it->size - (MICROPAK_BUFFER_SIZE * i));
+
+						if(compress) {
+							std::string cbuffer = gzip::compress(buffer, it->size - (MICROPAK_BUFFER_SIZE * i));
+							result.seekp(cursor);
+							result.write(cbuffer.c_str(), it->size - (MICROPAK_BUFFER_SIZE * i)); // Put the filedata into the result file
+							cursor += it->size - (MICROPAK_BUFFER_SIZE * i);
+						} else {
+							result.seekp(cursor);
+							result.write(buffer, it->size - (MICROPAK_BUFFER_SIZE * i)); // Put the filedata into the result file
+							cursor += it->size - (MICROPAK_BUFFER_SIZE * i);
+						}
+					// Otherwise just write in chunks of the max size
+					} else {
+						input_file.read(buffer, MICROPAK_BUFFER_SIZE);
+						if(compress) {
+							std::string cbuffer = gzip::compress(buffer, MICROPAK_BUFFER_SIZE);
+							result.seekp(cursor);
+							result.write(cbuffer.c_str(), MICROPAK_BUFFER_SIZE);
+							cursor += MICROPAK_BUFFER_SIZE;
+						} else {
+							result.seekp(cursor);
+							result.write(buffer, MICROPAK_BUFFER_SIZE);
+							cursor += MICROPAK_BUFFER_SIZE;
+						}
+					}
+				}
+			} else {
+				std::cout << "MICROPAK: Unable to append \"" + dirname + '/' + it->path + "\" to target file" << std::endl;
+			}
+		}
+	}
+	delete buffer;
+
+
+	// Write the archive info as a footer
+	//////////////////////////////////////
+	size_t footer_start = cursor; // Remember where the footer starts
 
 	result.seekp(cursor);
 	std::size_t meta_num = m_entries.size();
@@ -108,7 +183,7 @@ bool micropak::pack(std::string dirname, std::string outname, std::vector<microp
 	result.seekp(cursor);
 	std::size_t entry_num = entries.size();
 	result.write(reinterpret_cast<const char*>(&entry_num), sizeof(std::size_t)); // Write the amount of entries the archive has
-	cursor += sizeof(std::size_t); 
+	cursor += sizeof(std::size_t);
 
 	for(auto it = m_entries.begin(); it != m_entries.end(); it++){
 		result.seekp(cursor);
@@ -130,7 +205,7 @@ bool micropak::pack(std::string dirname, std::string outname, std::vector<microp
 		cursor += value_size;
 	}
 
-	for(auto it = entries.begin(); it != entries.end(); it++) { // Store all entry data at the beginning of the archive
+	for(auto it = entries.begin(); it != entries.end(); it++) { // Store all entry data at the end of the archive, now that we know compressed file sizes
 		result.seekp(cursor); // Seek to cursor position
 		result.write(reinterpret_cast<const char*>(&it->isDir), sizeof(bool)); // Write the data value (in this case if the entry is a directory)
 		cursor += sizeof(bool); // Advance cursor position
@@ -149,48 +224,24 @@ bool micropak::pack(std::string dirname, std::string outname, std::vector<microp
 		cursor += sizeof(long unsigned);
 	}
 
-	char* buffer = new char[MAX_ARCHIVE_BUFFER_SIZE];
-	for(auto it = entries.begin(); it != entries.end(); it++){ // Get the filedata for each entry and append it
-		if(!it->isDir && fsys::exists(dirname + '/' + it->path)){ 
-			std::fstream input_file(dirname + '/' + it->path, std::ios::in | std::ios::binary);
-			input_file.seekg(std::ios::beg);
-
-			if(input_file) {
-				for(float i = 0; i < ((float)it->size/(float)MAX_ARCHIVE_BUFFER_SIZE); i++) { // If the file is too big, seperate it into chunks
-					if(i+1 > it->size/MAX_ARCHIVE_BUFFER_SIZE) { // If the data left doesn't fill a chunk, be more precise
-						input_file.read(buffer, it->size - (MAX_ARCHIVE_BUFFER_SIZE * i));
-
-						result.seekp(cursor);
-						result.write(buffer, it->size - (MAX_ARCHIVE_BUFFER_SIZE * i)); // Put the filedata into the result file
-						cursor += it->size - (MAX_ARCHIVE_BUFFER_SIZE * i);
-					} else { // Otherwise just write in chunks of the max size
-						input_file.read(buffer, MAX_ARCHIVE_BUFFER_SIZE);
-
-						result.seekp(cursor);
-						result.write(buffer, MAX_ARCHIVE_BUFFER_SIZE);
-						cursor += MAX_ARCHIVE_BUFFER_SIZE;
-					}
-				}
-			} else {
-				std::cout << "ARCHIVE: Unable to append \"" + dirname + '/' + it->path + "\" to target file" << std::endl;
-			}
-		}
-	}
-	delete buffer;
+	// Finally, write the location that the footer starts
+	result.seekp(cursor);
+	result.write(reinterpret_cast<const char*>(footer_start), sizeof(size_t));
 
 	result.close();
 	return true;
 }
 
 
+
 std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::string outputdir){
 	fsys::path inDir = filename;
 	if(!fsys::exists(inDir)) {
-		std::cout << "ARCHIVE: File to unpack doesn't exist!" << std::endl;
+		std::cout << "MICROPAK: File to unpack doesn't exist!" << std::endl;
 		return {};
 	}
 
-	if(!(outputdir.back() == '/') && !outputdir.empty())
+	if(!(outputdir.back() == '/') && !outputdir.empty()) // Format the path correctly, add a slash at the end
 		outputdir += '/';
 
 	std::fstream input_file(filename.c_str(), std::ios::in | std::ios::binary);
@@ -201,7 +252,7 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 
 
 	if(version > max_version) { // Make sure we're capable of reading this format
-		std::cout << "ARCHIVE: Unable to read archive - format is a newer version than reader" << std::endl;
+		std::cout << "MICROPAK: Unable to read archive - format is a newer version than reader" << std::endl;
 		return {};
 	}
 
@@ -209,6 +260,10 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 	//////////////////////
 	if(version == 1) {
 		fsys::create_directories(outputdir); // Make the output path if it doesn't exist yet
+
+		// Find and seek to the start of the footer
+		input_file.seekg(std::ios::end - sizeof(size_t));
+		input_file.read(reinterpret_cast<char*>(cursor), sizeof(size_t)); 
 
 		input_file.seekg(cursor);
 		size_t meta_num = 0;
@@ -236,9 +291,10 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 			name_extract[name_size] = '\0'; // Null-terminate the buffer data
 			it->name = name_extract; // Assign the buffer data to storage
 
+			// Do the same for the value assigned to the name
 			input_file.seekg(cursor); 
 			size_t value_size = it->value.size() * sizeof(std::string::value_type);
-			input_file.write(reinterpret_cast<char*>(&value_size), sizeof(size_t)); // Do the same for the value assigned to the name
+			input_file.write(reinterpret_cast<char*>(&value_size), sizeof(size_t));
 			cursor += sizeof(size_t);
 
 			char* value_extract = new char[value_size+1];
@@ -252,7 +308,7 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 			delete value_extract;
 		}
 
-		// Get the entries from the archive header
+		// Get the entries from the archive footer
 		for(auto it = entries.begin(); it != entries.end(); it++) {
 			input_file.seekg(cursor);
 			input_file.read(reinterpret_cast<char*>(&it->isDir), sizeof(bool));
@@ -278,8 +334,10 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 			cursor += sizeof(long unsigned);
 		}
 
-		// Now start creating files and directories based off of this entry
-		char* buffer = new char[MAX_ARCHIVE_BUFFER_SIZE];
+		// Now start creating files and directories based off of these entries
+		cursor = sizeof(unsigned short); // Go to where data starts
+
+		char* buffer = new char[MICROPAK_BUFFER_SIZE];
 		for(auto it = entries.begin(); it != entries.end(); it++) {
 			fsys::path path = outputdir + it->path;
 			path.make_preferred();
@@ -291,29 +349,39 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 				unsigned output_cursor = 0;
 
 				if(output_file) {
-					for(unsigned i = 0; i < (float)it->size/(float)MAX_ARCHIVE_BUFFER_SIZE; i++) { // If the file is too big, seperate it into chunks
-						if(i+1 > it->size/MAX_ARCHIVE_BUFFER_SIZE) { // If the data left doesn't fill a chunk, be more precise
+					// If the file is too big, seperate it into chunks
+					for(unsigned i = 0; i < (float)it->size/(float)MICROPAK_BUFFER_SIZE; i++) {
+						if(i+1 > it->size/MICROPAK_BUFFER_SIZE) { // If the data left doesn't fill a chunk, be more precise
 							input_file.seekg(cursor);
-							input_file.read(buffer, it->size - (MAX_ARCHIVE_BUFFER_SIZE * i));
-							cursor += it->size - (MAX_ARCHIVE_BUFFER_SIZE * i);
+							input_file.read(buffer, it->size - (MICROPAK_BUFFER_SIZE * i));
+							cursor += it->size - (MICROPAK_BUFFER_SIZE * i);
 
 							output_file.seekp(output_cursor);
-							output_file.write(buffer, it->size - (MAX_ARCHIVE_BUFFER_SIZE * i)); // Put the filedata into the result file
-							output_cursor += it->size - (MAX_ARCHIVE_BUFFER_SIZE * i);
+							output_file.write(buffer, it->size - (MICROPAK_BUFFER_SIZE * i)); // Put the filedata into the result file
+							output_cursor += it->size - (MICROPAK_BUFFER_SIZE * i);
 							*buffer = '\0'; // Remove the data from the buffer, but don't deallocate yet
 						} else { // Otherwise just write in chunks of the max size
 							input_file.seekg(cursor);
-							input_file.read(buffer, MAX_ARCHIVE_BUFFER_SIZE);
+							input_file.read(buffer, MICROPAK_BUFFER_SIZE);
 							cursor += it->size;
 
 							output_file.seekp(output_cursor);
-							output_file.write(buffer, MAX_ARCHIVE_BUFFER_SIZE);
-							output_cursor += MAX_ARCHIVE_BUFFER_SIZE;
+							output_file.write(buffer, MICROPAK_BUFFER_SIZE);
+							output_cursor += MICROPAK_BUFFER_SIZE;
 							*buffer = '\0';
 						}
 					}
+
+					#ifdef MICROPAK_USE_GZIP
+
+					for(unsigned i = 0; i < (float)it->size/(float)MICROPAK_BUFFER_SIZE; i++) {
+
+					}
+
+					#endif
+
 				} else {
-					std::cout << "ARCHIVE: Unable to create file \"" + path.string() + "\"" << std::endl;
+					std::cout << "MICROPAK: Unable to create file \"" + path.string() + "\"" << std::endl;
 				}
 			}
 		}
@@ -322,7 +390,7 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 	}
 	
 	input_file.close();
-	std::cout << "ARCHIVE: The archive didn't match any avalible extraction methods" << std::endl;
+	std::cout << "MICROPAK: The archive didn't match any avalible extraction methods" << std::endl;
 	return {}; // The version didn't match any avalible extraction methods
 }
 
@@ -331,7 +399,7 @@ unsigned short micropak::getVersion(std::string filename) {
 
 	fsys::path inDir = filename;
 	if(!fsys::exists(inDir)) {
-		std::cout << "ARCHIVE: File to check doesn't exist!" << std::endl;
+		std::cout << "MICROPAK: File to check doesn't exist!" << std::endl;
 		return false;
 	}
 

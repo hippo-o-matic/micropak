@@ -1,8 +1,9 @@
 Micropak, a basic header library for archiving files
-You probably shouldn't use this for anything serious
+You probably shouldn't use this for anything serious(yet)
 
 In case this library is updated in the future, there is backwards compatability for any archives packed with previous release builds.
 If you want to save on space and only use the latest unpacker version, delete anything between the //OLD//VERSIONS lines.
+
 
 All commands are stored under the "micropak" namespace, these include:
 
@@ -18,6 +19,17 @@ Unpacks the <input_file> to <output_dir>, by default the working directory. Retu
 
 micropak::getVersion(std::string filename); | micropak::getVersion(std::fstream &stream);
 Gets the version of the library the archive was packed with
+
+
+This library includes support for compressing and decompressing archives on the fly using gzip-hpp (https://github.com/mapbox/gzip-hpp) made by mapbox. You can toggle the use of gzip-hpp by commenting out the
+
+#define MICROPAK_USE_GZIP
+
+line. If you use it, you will need to include gzip-hpp's header files, specifically:
+- gzip/compress.hpp
+- gzip/decompress.hpp
+- gzip/config.hpp
+Make sure these files are named exactly as above, that is, inside a folder named "gzip" in the root of your include path. 
 
 
 This repo also comes with a minimalist example program, archive.cpp. Simply compile with make.
