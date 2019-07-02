@@ -1,0 +1,7 @@
+.vscode/**
+gzip/decompress.hpp
+gzip/compress.hpp
+gzip/config.hpp
+gzip/utils.hpp
+gzip/version.hpp
+.Readme.kate-swp
