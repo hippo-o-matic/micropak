@@ -1,4 +1,6 @@
-Micropak, a basic header library for archiving files
+Micropak, a basic library for archiving files
+
+To use include micropak.hpp in your source and link libmicropak.a (-lmicropak in g++)
 
 All commands are stored under the "micropak" namespace, these include:
 
