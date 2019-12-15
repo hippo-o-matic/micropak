@@ -1,6 +1,20 @@
 Micropak, a basic library for archiving files
+Written by hippo_o_matic
 
-To use include micropak.hpp in your source and link libmicropak.a (-lmicropak in g++)
+Dependencies:
+- meson
+- gzip-hpp (optionally)
+- zlib (optionally)
+
+Building:
+
+mkdir build
+meson build
+ninja -C build
+
+
+To use include micropak.hpp in your source and link libmicropak.so (-lmicropak in g++)
+
 
 All commands are stored under the "micropak" namespace, these include:
 
@@ -18,15 +32,15 @@ micropak::getVersion(std::string filename); | micropak::getVersion(std::fstream 
 Gets the version of the library the archive was packed with
 
 
-This library includes support for compressing and decompressing archives on the fly using gzip-hpp (https://github.com/mapbox/gzip-hpp) made by mapbox. You can toggle the use of gzip-hpp by commenting out the
+This library includes support for compressing and decompressing archives on the fly using gzip-hpp (https://github.com/mapbox/gzip-hpp) made by mapbox. You can toggle the use of gzip-hpp by setting the option 'use_gzip' either in meson_options.txt or by configuring the project like so:
 
-#define MICROPAK_USE_GZIP
+meson configure -Doption=newvalue
 
-line. If you use it, you will need to include gzip-hpp's header files.
+If you use gzip, you will need to include gzip-hpp's header files.
 Make sure these files are inside a folder named "gzip" in the root of your include path. 
 
 
-This repo also comes with a minimalist example program, micropak.cpp. Simply compile with make.
+This repo also comes with a minimalist example program, demo.cpp. 
 
 Program usage: ./archiver <options>
 -p <directory>  | Recursively packs all files in <directory> to -o <file>. Uses <directory>.mpak if -o <file> not given

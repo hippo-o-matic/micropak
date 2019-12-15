@@ -1,0 +1,3 @@
+option('build_sample', type : 'boolean', value : true, description : 'Build the sample executable')
+option('use_gzip', type : 'boolean', value : true, description : 'Link gzip library and enable compression functionality')
+option('max_buffer_size', type : 'integer', value : 500000000, description : 'Maximum memory to be used as a buffer in bytes (max 500 MB due to gzip limits)')
