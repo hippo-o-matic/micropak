@@ -111,13 +111,13 @@ int main(int argc, char* argv[]) {
 		"Micropak v0.2\n"
 		"A (not very good) basic file archiving program\n"
 		"Options:\n"
-		"-p <directory> 	 | Recursively packs all files in <directory> to -o <file>. Uses <directory>.mpak if -o <file> not given\n"
-		"-u <file> 			 | Unpacks an archive, <file>, using -o <directory> as it's root. Uses <file> as the name if -o <directory> not given\n"
-		"-o <file/directory> | Outputs the result of -p or -u to <file/directory>\n"
-		"-m <name=content,name=content> | Attaches given meta tag pairs, the name and content of each tag seperated by '=', and each pair seperated by ','\n"
-		"-v					 | Enables verbose mode, reports back what is being done for debugging purposes\n"
-		"--no-gzip 			 | Packs a file without gzipping it\n"
-		"-h, --help 		 | Displays this message :)"
+		"-p <directory>	| Recursively packs all files in <directory> to -o <file>. Uses <directory>.mpak if -o <file> not given\n"
+		"-u <file>	| Unpacks an archive, <file>, using -o <directory> as it's root. Uses <file> as the name if -o <directory> not given\n"
+		"-o <file/directory>	| Outputs the result of -p or -u to <file/directory>\n"
+		"-m <name=content,name=content>	| Attaches given meta tag pairs, the name and content of each tag seperated by '=', and each pair seperated by ','\n"
+		"-v	| Enables verbose mode, reports back what is being done for debugging purposes\n"
+		"--no-gzip	| Packs a file without gzipping it\n"
+		"-h, --help	| Displays this message :)"
 	<< std::endl;
 	return 0;
 }
