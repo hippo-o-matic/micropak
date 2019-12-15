@@ -23,8 +23,8 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef MICROPAK_H
 #define MICROPAK_H
 
-#define MICROPAK_BUFFER_SIZE 500000000 // The maximum amount of memory to take for file extraction/compression in bytes (default 500 MB due to gzip limitations)
-#define MICROPAK_USE_GZIP  // Remove this line if you don't want to use the gzip library (https://github.com/mapbox/gzip-hpp)
+//#define MICROPAK_BUFFER_SIZE 500000000 // The maximum amount of memory to take for file extraction/compression in bytes (default 500 MB due to gzip limitations)
+//#define MICROPAK_USE_GZIP true // Remove this line if you don't want to use the gzip library (https://github.com/mapbox/gzip-hpp)
 
 #include <iostream>
 #include <fstream>
@@ -32,6 +32,8 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 #include <cmath>
 #include <experimental/filesystem> // Change this to <filesystem> when g++ decides it's good enough 
+
+#include "config.h"
 
 #ifdef MICROPAK_USE_GZIP
 #include "gzip/compress.hpp"

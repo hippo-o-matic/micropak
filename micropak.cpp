@@ -196,6 +196,7 @@ std::vector<micropak::meta_entry> micropak::unpack(std::string filename, std::st
 	if(!(outputdir.back() == '/') && !outputdir.empty()) // Format the path correctly, add a slash at the end
 		outputdir += '/';
 
+	// Make the extratction location the archive name by default
 	if(outputdir.empty()) {
 		outputdir = filename.substr(filename.find(".mpak")); // If the archive has any suffixes, remove them
 		outputdir = outputdir.substr(outputdir.find(".gz"));
