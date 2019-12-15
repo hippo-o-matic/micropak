@@ -43,10 +43,10 @@ Make sure these files are inside a folder named "gzip" in the root of your inclu
 This repo also comes with a minimalist example program, demo.cpp. 
 
 Program usage: ./archiver <options>
--p <directory> 	                | Recursively packs all files in <directory> to -o <file>. Uses <directory>.mpak if -o <file> not given
--u <file> 			            | Unpacks an archive, <file>, using -o <directory> as it's root. Uses <file> as the name if -o <directory> not given
--o <file/directory>             | Outputs the result of -p or -u to <file/directory>
+-p <directory>  | Recursively packs all files in <directory> to -o <file>. Uses <directory>.mpak if -o <file> not given
+-u <file> | Unpacks an archive, <file>, using -o <directory> as it's root. Uses <file> as the name if -o <directory> not given
+-o <file/directory> | Outputs the result of -p or -u to <file/directory>
 -m <name=content,name=content>  | Attaches given meta tag pairs, the name and content of each tag seperated by '=', and each pair seperated by ','
--v					            | Enables verbose mode, reports back what is being done for debugging purposes
---no-gzip 			            | Packs a file without gzipping it
--h, --help 		                | Displays this message :)"
+-v  | Enables verbose mode, reports back what is being done for debugging purposes
+--no-gzip | Packs a file without gzipping it
+-h, --help  | Displays this message :)"
