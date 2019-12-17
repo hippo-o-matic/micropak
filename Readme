@@ -3,8 +3,8 @@ Written by hippo_o_matic
 
 Dependencies:
 - meson
-- gzip-hpp (optionally)
 - zlib (optionally)
+- cmake (optionally)
 
 Building:
 
@@ -36,9 +36,7 @@ This library includes support for compressing and decompressing archives on the 
 
 meson configure -Doption=newvalue
 
-If you use gzip, you will need to include gzip-hpp's header files.
-Make sure these files are inside a folder named "gzip" in the root of your include path. 
-
+If you use gzip-hpp, meson should automatically clone it and build it with cmake.
 
 This repo also comes with a minimalist example program, demo.cpp. 
 
