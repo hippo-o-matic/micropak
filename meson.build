@@ -16,10 +16,6 @@ deps = []
 
 if get_option('use_gzip')
     deps += dependency('zlib') 
-
-    cmake = import('cmake')
-    gzip_hpp = cmake.subproject('gzip-hpp')
-    include += 'subprojects/gzip-hpp/include' #Couldn't get include_directories working for some reason
 endif
 
 add_project_link_arguments(['-ldl','-lstdc++fs'], language : 'cpp')
@@ -28,7 +24,7 @@ micropak = shared_library('micropak', 'micropak.cpp',
                             include_directories: '.',
                             dependencies : deps)
 
-micropak_dep = declare_dependency(include_directories: '.', link_with: micropak)
+micropak_dep = declare_dependency(include_directories: include, link_with: micropak)
 
 if get_option('build_sample')
     executable('demopack', 'demo.cpp', link_with : micropak)
