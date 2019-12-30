@@ -11,10 +11,11 @@ conf_data.set('MICROPAK_USE_GZIP', get_option('use_gzip'))
 configure_file(output : 'config.h',
                configuration : conf_data)
 
+include = [include_directories('.')]
 deps = []
 
 if get_option('use_gzip')
-    deps += dependency('zlib')
+    deps += dependency('zlib') 
 endif
 
 add_project_link_arguments(['-ldl','-lstdc++fs'], language : 'cpp')
@@ -22,6 +23,8 @@ add_project_link_arguments(['-ldl','-lstdc++fs'], language : 'cpp')
 micropak = shared_library('micropak', 'micropak.cpp',
                             include_directories: '.',
                             dependencies : deps)
+
+micropak_dep = declare_dependency(include_directories: include, link_with: micropak)
 
 if get_option('build_sample')
     executable('demopack', 'demo.cpp', link_with : micropak)
